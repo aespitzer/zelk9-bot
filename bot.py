@@ -52,3 +52,29 @@ async def on_message(message):
         await message.channel.send(chunk)
 
 discord_client.run(os.environ["zelk_discord"])
+
+import datetime
+import asyncio
+
+TARGET_CHANNEL_ID = 1493051329676050442
+
+@discord_client.event
+async def on_ready():
+    print(f"Zelk9 online as {discord_client.user}")
+    discord_client.loop.create_task(scheduled_message())
+
+async def scheduled_message():
+    await discord_client.wait_until_ready()
+    while not discord_client.is_closed():
+        now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-6)))  # CST
+        if 9 <= now.hour < 21:
+            channel = discord_client.get_channel(TARGET_CHANNEL_ID)
+            if channel:
+                response = anthropic_client.messages.create(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=1024,
+                    system=ZELK9_PROMPT,
+                    messages=[{"role": "user", "content": "Send your operative an unsolicited check-in message. You have been observing or doing something. Issue a directive or update. Be brief."}],
+                )
+                await channel.send(response.content[0].text)
+        await asyncio.sleep(4 * 60 * 60)  # wait 4 hours
